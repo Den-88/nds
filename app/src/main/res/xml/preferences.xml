@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Выбор темы -->
+    <com.den.shak.nds.CustomListPreference
+        android:icon="@drawable/ic_theme"
+        android:key="list_preference"
+        android:title="@string/ListTitle"
+        android:summary="@string/SetTheme"
+        android:entries="@array/entries"
+        android:entryValues="@array/entry_values"
+        android:defaultValue="@string/pref_theme_default" />
+
+    <!--  CheckBox - сохранять расчёт -->
+    <CheckBoxPreference
+        android:icon="@drawable/ic_save"
+        android:key="checkbox_preference"
+        android:title="@string/SaveExit"
+        android:summary="@string/SaveExit2"
+        android:defaultValue="true" />
+
+</PreferenceScreen>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Base.Theme.NDS" parent="Theme.Material3.DynamicColors.DayNight">
+        <!-- Сделать строку состояния светлой с темным текстом -->
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">#FFFFFF</item>
+    </style>
+    <style name="Base.Theme.NDS.light" parent="Theme.Material3.DynamicColors.Light">
+        <!-- Сделать строку состояния светлой с темным текстом -->
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">#FFFFFF</item>
+    </style>
+    <style name="Base.Theme.NDS.dark" parent="Theme.Material3.DynamicColors.Dark">
+        <!-- Сделать строку состояния светлой с темным текстом -->
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">#000000</item>
+    </style>
+</resources>
