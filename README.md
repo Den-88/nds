@@ -26,7 +26,18 @@
 
 ## Ссылки на Google Play и RuStore
 
-Вы можете скачать и установить приложение "НДС" через [Google Play Store](https://play.google.com/store/apps/details?hl=ru&gl=ru&id=com.den.shak.nds) или [RuStore](https://www.rustore.ru/catalog/app/com.den.shak.nds) .
+Вы можете скачать и установить приложение "НДС" через **Google Play** или **RuStore** по ссылкам ниже:
+
+<table>
+  <tr>
+    <td><a href="https://play.google.com/store/apps/details?hl=ru&gl=ru&id=com.den.shak.nds">
+      <img src="https://play.google.com/intl/en_us/badges/static/images/badges/ru_badge_web_generic.png" alt="Google Play" height="120">
+    </a></td>
+    <td><a href="https://www.rustore.ru/catalog/app/com.den.shak.nds">
+      <img src="https://www.rustore.ru/help/icons/logo-color-dark.svg" alt="RuStore" height="120">
+    </a></td>
+  </tr>
+</table>
 
 ## Скриншоты
 
