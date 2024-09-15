@@ -3,7 +3,6 @@ package com.den.shak.nds
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.SharedPreferences
-import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -17,6 +16,7 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewTreeObserver
 import android.view.inputmethod.InputMethodManager
+import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.LinearLayout
 import androidx.core.view.ViewCompat
@@ -43,9 +43,10 @@ class MainActivity : BaseActivity() {
     private lateinit var sumWithNDS: EditText
     private lateinit var sumWithoutNDS: EditText
     private lateinit var sumNDS: EditText
-    private lateinit var rootView: View
     private lateinit var sharedPreferences: SharedPreferences
     private var isSaveExit: Boolean = false
+    private lateinit var spinnerItems: Array<String>
+    private lateinit var adapter: ArrayAdapter<String>
     private var percent: Double = 0.0
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,6 +65,13 @@ class MainActivity : BaseActivity() {
         sumNDS = findViewById(R.id.SumNDS)
         choosePercent = findViewById(R.id.autoCompleteTextView)
 
+        // Загружаем массив строк из ресурсов (arrays.xml) в переменную spinnerItems
+        spinnerItems = resources.getStringArray(R.array.spinner_values)
+        // Создание адаптера для выпадающего списка, используя массив spinnerItems
+        adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, spinnerItems)
+        // Применение созданного адаптера к элементу MaterialAutoCompleteTextView (choosePercent)
+        choosePercent.setAdapter(adapter)
+
         // Установка отступов для главного View с учетом системных панелей
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -71,6 +79,7 @@ class MainActivity : BaseActivity() {
             insets
         }
 
+        // Устанавливаем слушатели для различных элементов интерфейса
         setListeners()
 
         // Отслеживание изменения размера контейнера для рекламы и загрузка баннера
@@ -95,6 +104,25 @@ class MainActivity : BaseActivity() {
             choosePercent.setText(getString(R.string.snip1), false)
         }
     }
+
+    // Этот метод вызывается, когда активность теряет фокус
+    override fun onPause() {
+        super.onPause()
+        // Сохраняем текущее значение текста из поля ввода "SumWithNDS" в SharedPreferences.
+        sharedPreferences.edit().putString("SumWithNDS", binding.SumWithNDS.text.toString()).apply()
+    }
+
+    // Восстановление состояния активности после её пересоздания (например, при повороте экрана)
+    override fun onRestoreInstanceState(savedInstanceState: Bundle) {
+        super.onRestoreInstanceState(savedInstanceState)
+
+        // Создание адаптера для выпадающего списка, используя массив spinnerItems
+        adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, spinnerItems)
+        // Применение созданного адаптера к элементу MaterialAutoCompleteTextView (choosePercent)
+        choosePercent.setAdapter(adapter)
+    }
+
+
     // Создание меню
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu_main, menu)
@@ -197,7 +225,8 @@ class MainActivity : BaseActivity() {
                 override fun onReturnedToApplication() {}
 
                 // Событие при показе рекламы
-                override fun onImpression(impressionData: ImpressionData?) {}
+                override fun onImpression(impressionData: ImpressionData?) {
+                }
             })
             // Загружаем рекламный запрос
             loadAd(AdRequest.Builder().build())
@@ -271,14 +300,9 @@ class MainActivity : BaseActivity() {
                         }
                     }
                 }
-                if (isSaveExit) {
-                    sharedPreferences.edit().putString("SumWithNDS", s.toString()).apply()
-                } else {
-                    sharedPreferences.edit().remove("SumWithNDS").apply()
-                }
-
             }
         })
+
         binding.SumWithoutNDS.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
@@ -416,19 +440,9 @@ class MainActivity : BaseActivity() {
                 }
             }
             override fun afterTextChanged(s: Editable?) {
-                if (isSaveExit) {
-                    sharedPreferences.edit().putString("autoCompleteTextView", s.toString()).apply()
-                } else {
-                    sharedPreferences.edit().remove("autoCompleteTextView").apply()
-                }
+                sharedPreferences.edit().putString("autoCompleteTextView", s.toString()).apply()
             }
         })
-
-        // Инициализация корневого представления для отслеживания изменений макета
-        rootView = findViewById(android.R.id.content)
-        rootView.viewTreeObserver.addOnGlobalLayoutListener {
-            adjustLayoutForKeyboard() // Вызов метода для корректировки макета при изменении размера
-        }
 
         // Установка слушателя изменения фокуса для EditText sumWithNDS
         sumWithNDS.setOnFocusChangeListener { _, hasFocus ->
@@ -458,30 +472,7 @@ class MainActivity : BaseActivity() {
         }
     }
 
-    // Метод для корректировки макета при открытии и закрытии клавиатуры
-    private fun adjustLayoutForKeyboard() {
-        // Создание прямоугольника для получения видимой области окна
-        val r = Rect()
-        rootView.getWindowVisibleDisplayFrame(r)
-        val screenHeight = rootView.height
-        // Вычисление высоты клавиатуры
-        val keypadHeight = screenHeight - r.bottom
 
-        // Проверка, превышает ли высота клавиатуры 15% высоты экрана
-        if (keypadHeight > screenHeight * 0.15) { // если высота клавиатуры больше 15% высоты экрана
-            // Клавиатура открыта
-            val layout = findViewById<LinearLayout>(R.id.main)
-            // Установка высоты макета с учётом высоты клавиатуры
-            layout.layoutParams.height = screenHeight - keypadHeight
-            layout.requestLayout() // Запрос на перерасчёт макета
-        } else {
-            // Клавиатура закрыта
-            val layout = findViewById<LinearLayout>(R.id.main)
-            // Восстановление высоты макета до высоты экрана
-            layout.layoutParams.height = screenHeight
-            layout.requestLayout() // Запрос на перерасчёт макета
-        }
-    }
 }
 
 

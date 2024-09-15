@@ -36,10 +36,7 @@ open class BaseActivity : AppCompatActivity() {
         // Проверяем, изменилось ли значение темы по сравнению с предыдущим
         if (currentTheme != null && currentTheme != themePreference) {
             // Если тема изменилась, перезапускаем MainActivity, чтобы применить новую тему
-            val intent = Intent(this, MainActivity::class.java)
-            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-            startActivity(intent)
-            finish()
+            recreate()
         } else {
             // Обновляем сохранённое значение текущей темы
             currentTheme = themePreference
