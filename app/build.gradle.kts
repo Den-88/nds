@@ -5,14 +5,14 @@ plugins {
 
 android {
     namespace = "com.den.shak.nds"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.den.shak.nds"
         minSdk = 24
         targetSdk = 35
         versionCode = 8
-        versionName = "2.3.0"
+        versionName = "2.4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

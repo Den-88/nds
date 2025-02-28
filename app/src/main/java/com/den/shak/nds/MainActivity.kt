@@ -19,6 +19,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.LinearLayout
+import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.preference.PreferenceManager
@@ -33,8 +34,11 @@ import com.yandex.mobile.ads.common.AdRequest
 import com.yandex.mobile.ads.common.AdRequestError
 import com.yandex.mobile.ads.common.ImpressionData
 import com.yandex.mobile.ads.common.MobileAds
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
 import java.util.Locale
 import kotlin.math.roundToInt
+
 
 class MainActivity : BaseActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -109,7 +113,7 @@ class MainActivity : BaseActivity() {
     override fun onPause() {
         super.onPause()
         // Сохраняем текущее значение текста из поля ввода "SumWithNDS" в SharedPreferences.
-        sharedPreferences.edit().putString("SumWithNDS", binding.SumWithNDS.text.toString()).apply()
+        sharedPreferences.edit { putString("SumWithNDS", binding.SumWithNDS.text.toString()) }
     }
 
     // Восстановление состояния активности после её пересоздания (например, при повороте экрана)
@@ -234,7 +238,7 @@ class MainActivity : BaseActivity() {
     }
 
     // Метод для вычисления значений на основе введенного процента
-    private fun doCalculation() {
+    private fun doCalculation(df: DecimalFormat) {
         val textPercent = binding.autoCompleteTextView.text.toString()
         // Извлекаем строку до знака процента
         val percentIndex = textPercent.indexOf('%')
@@ -244,49 +248,52 @@ class MainActivity : BaseActivity() {
         percent = numberString.toDouble()
 
         if (binding.SumWithoutNDS.isFocused) {
-            if (binding.SumWithoutNDS.text.toString().isEmpty()) {
+            if (binding.SumWithoutNDS.text.toString().isEmpty() || binding.SumWithoutNDS.text.toString().startsWith(".")) {
                 binding.SumWithNDS.setText("")
                 binding.SumNDS.setText("")
             } else {
-                val x = binding.SumWithoutNDS.getText().toString().toDouble()
-                binding.SumWithNDS.setText(String.format(Locale.US, "%.2f", (x * (100 + percent) / 100)))
-                binding.SumNDS.setText(String.format(Locale.US, "%.2f", (x * percent / 100)))
-
+                val x = binding.SumWithoutNDS.getText().toString().replace(" ", "").toDouble()
+                binding.SumWithNDS.setText(df.format(x * (100 + percent) / 100))
+                binding.SumNDS.setText(df.format(x * percent / 100 ))
             }
 
         } else if (binding.SumNDS.isFocused) {
-            if (binding.SumNDS.text.toString().isEmpty()) {
+            if (binding.SumNDS.text.toString().isEmpty() || binding.SumNDS.text.toString().startsWith(".")) {
                 binding.SumWithNDS.setText("")
                 binding.SumWithoutNDS.setText("")
             } else {
-                val x = binding.SumNDS.getText().toString().toDouble()
-                binding.SumWithNDS.setText(String.format(Locale.US, "%.2f", (x + (x * 100 / percent ))))
-                binding.SumWithoutNDS.setText(String.format(Locale.US, "%.2f", (x * 100 / percent )))
-
+                val x = binding.SumNDS.getText().toString().replace(" ", "").toDouble()
+                binding.SumWithNDS.setText(df.format(x + (x * 100 / percent )))
+                binding.SumWithoutNDS.setText(df.format(x * 100 / percent ))
             }
         } else {
-            if (binding.SumWithNDS.text.toString().isEmpty()) {
+            if (binding.SumWithNDS.text.toString().isEmpty() || binding.SumWithNDS.text.toString().startsWith(".")) {
                 binding.SumWithoutNDS.setText("")
                 binding.SumNDS.setText("")
             } else {
-                val x = binding.SumWithNDS.getText().toString().toDouble()
-                binding.SumWithoutNDS.setText(String.format(Locale.US, "%.2f", (x - (x * percent)/(100 + percent))))
-                binding.SumNDS.setText(String.format(Locale.US, "%.2f", (x * percent)/(100 + percent)))
-
+                val x = binding.SumWithNDS.getText().toString().replace(" ", "").toDouble()
+                binding.SumWithoutNDS.setText(df.format(x - (x * percent) / (100 + percent)))
+                binding.SumNDS.setText(df.format((x * percent)/(100 + percent)))
             }
         }
     }
 
     // Установка слушателей
      private fun setListeners() {
+        val symbols = DecimalFormatSymbols(Locale.US)
+        // Разделитель тысяч — пробел
+        symbols.setGroupingSeparator(' ')
+        val df = DecimalFormat("#,##0.00", symbols)
+
         // Установить TextWatcher для EditText
         binding.SumWithNDS.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 if (binding.SumWithNDS.isFocused) {
-                    doCalculation()
+                    doCalculation(df)
                 }
             }
+            @SuppressLint("SetTextI18n")
             override fun afterTextChanged(s: Editable?) {
                 s?.let {
                     val text = it.toString()
@@ -294,9 +301,37 @@ class MainActivity : BaseActivity() {
                     if (text.contains(".")) {
                         // Разделяем число на две части: до и после запятой
                         val parts = text.split(".")
+                        // Если первый символ - точка, добавляем 0 перед точкой
+                        if (parts[0].isEmpty()) {
+                            binding.SumWithNDS.setText("0." + parts[1])
+                            binding.SumWithNDS.setSelection(2)
+                        }
+                        // Сохраняем текущую позицию курсора
+                        val cursorPosition = parts[0].length - binding.SumWithNDS.selectionStart
+
+                        val replaceDecimal = parts[0].replace(" ", "").reversed().chunked(3).joinToString(" ").reversed()
+                        if (parts[0] != replaceDecimal) {
+                            binding.SumWithNDS.setText(replaceDecimal + "." + parts[1])
+                            // Восстанавливаем позицию курсора
+                            if ((replaceDecimal.length - cursorPosition) >= 0) {
+                                binding.SumWithNDS.setSelection(replaceDecimal.length - cursorPosition)
+                            }
+                        }
                         // Если после запятой больше 2 цифр, обрезаем строку
                         if (parts.size > 1 && parts[1].length > 2) {
-                            it.replace(0, it.length, parts[0] + "." + parts[1].substring(0, 2))
+                            binding.SumWithNDS.setText(parts[0] + "." + parts[1].substring(0, 2))
+                            binding.SumWithNDS.setSelection(text.length - 1)
+                        }
+                    } else {
+                        // Сохраняем текущую позицию курсора
+                        val cursorPosition = text.length - binding.SumWithNDS.selectionStart
+                        val replaceDecimal = text.replace(" ", "").reversed().chunked(3).joinToString(" ").reversed()
+                        if (text != replaceDecimal) {
+                            binding.SumWithNDS.setText(replaceDecimal)
+                            // Восстанавливаем позицию курсора
+                            if ((replaceDecimal.length - cursorPosition) >= 0) {
+                                binding.SumWithNDS.setSelection(replaceDecimal.length - cursorPosition)
+                            }
                         }
                     }
                 }
@@ -307,9 +342,10 @@ class MainActivity : BaseActivity() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 if (binding.SumWithoutNDS.isFocused) {
-                    doCalculation()
+                    doCalculation(df)
                 }
             }
+            @SuppressLint("SetTextI18n")
             override fun afterTextChanged(s: Editable?) {
                 s?.let {
                     val text = it.toString()
@@ -317,9 +353,37 @@ class MainActivity : BaseActivity() {
                     if (text.contains(".")) {
                         // Разделяем число на две части: до и после запятой
                         val parts = text.split(".")
+                        // Если первый символ - точка, добавляем 0 перед точкой
+                        if (parts[0].isEmpty()) {
+                            binding.SumWithoutNDS.setText("0." + parts[1])
+                            binding.SumWithoutNDS.setSelection(2)
+                        }
+                        // Сохраняем текущую позицию курсора
+                        val cursorPosition = parts[0].length - binding.SumWithoutNDS.selectionStart
+
+                        val replaceDecimal = parts[0].replace(" ", "").reversed().chunked(3).joinToString(" ").reversed()
+                        if (parts[0] != replaceDecimal) {
+                            binding.SumWithoutNDS.setText(replaceDecimal + "." + parts[1])
+                            // Восстанавливаем позицию курсора
+                            if ((replaceDecimal.length - cursorPosition) >= 0) {
+                                binding.SumWithoutNDS.setSelection(replaceDecimal.length - cursorPosition)
+                            }
+                        }
                         // Если после запятой больше 2 цифр, обрезаем строку
                         if (parts.size > 1 && parts[1].length > 2) {
-                            it.replace(0, it.length, parts[0] + "." + parts[1].substring(0, 2))
+                            binding.SumWithoutNDS.setText(parts[0] + "." + parts[1].substring(0, 2))
+                            binding.SumWithoutNDS.setSelection(text.length - 1)
+                        }
+                    } else {
+                        // Сохраняем текущую позицию курсора
+                        val cursorPosition = text.length - binding.SumWithoutNDS.selectionStart
+                        val replaceDecimal = text.replace(" ", "").reversed().chunked(3).joinToString(" ").reversed()
+                        if (text != replaceDecimal) {
+                            binding.SumWithoutNDS.setText(replaceDecimal)
+                            // Восстанавливаем позицию курсора
+                            if ((replaceDecimal.length - cursorPosition) >= 0) {
+                                binding.SumWithoutNDS.setSelection(replaceDecimal.length - cursorPosition)
+                            }
                         }
                     }
                 }
@@ -329,9 +393,10 @@ class MainActivity : BaseActivity() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 if (binding.SumNDS.isFocused) {
-                    doCalculation()
+                    doCalculation(df)
                 }
             }
+            @Suppress("SetTextI18n")
             override fun afterTextChanged(s: Editable?) {
                 s?.let {
                     val text = it.toString()
@@ -339,9 +404,37 @@ class MainActivity : BaseActivity() {
                     if (text.contains(".")) {
                         // Разделяем число на две части: до и после запятой
                         val parts = text.split(".")
+                        // Если первый символ - точка, добавляем 0 перед точкой
+                        if (parts[0].isEmpty()) {
+                            binding.SumNDS.setText("0." + parts[1])
+                            binding.SumNDS.setSelection(2)
+                        }
+                        // Сохраняем текущую позицию курсора
+                        val cursorPosition = parts[0].length - binding.SumNDS.selectionStart
+
+                        val replaceDecimal = parts[0].replace(" ", "").reversed().chunked(3).joinToString(" ").reversed()
+                        if (parts[0] != replaceDecimal) {
+                            binding.SumNDS.setText(replaceDecimal + "." + parts[1])
+                            // Восстанавливаем позицию курсора
+                            if ((replaceDecimal.length - cursorPosition) >= 0) {
+                                binding.SumNDS.setSelection(replaceDecimal.length - cursorPosition)
+                            }
+                        }
                         // Если после запятой больше 2 цифр, обрезаем строку
                         if (parts.size > 1 && parts[1].length > 2) {
-                            it.replace(0, it.length, parts[0] + "." + parts[1].substring(0, 2))
+                            binding.SumNDS.setText(parts[0] + "." + parts[1].substring(0, 2))
+                            binding.SumNDS.setSelection(text.length - 1)
+                        }
+                    } else {
+                        // Сохраняем текущую позицию курсора
+                        val cursorPosition = text.length - binding.SumNDS.selectionStart
+                        val replaceDecimal = text.replace(" ", "").reversed().chunked(3).joinToString(" ").reversed()
+                        if (text != replaceDecimal) {
+                            binding.SumNDS.setText(replaceDecimal)
+                            // Восстанавливаем позицию курсора
+                            if ((replaceDecimal.length - cursorPosition) >= 0) {
+                                binding.SumNDS.setSelection(replaceDecimal.length - cursorPosition)
+                            }
                         }
                     }
                 }
@@ -436,11 +529,11 @@ class MainActivity : BaseActivity() {
                     // Устанавливаем фильтр в EditText
                     prc.filters = arrayOf(decimalInputFilter)
                 } else  {
-                    doCalculation()
+                    doCalculation(df)
                 }
             }
             override fun afterTextChanged(s: Editable?) {
-                sharedPreferences.edit().putString("autoCompleteTextView", s.toString()).apply()
+                sharedPreferences.edit { putString("autoCompleteTextView", s.toString()) }
             }
         })
 
@@ -471,8 +564,6 @@ class MainActivity : BaseActivity() {
             }
         }
     }
-
-
 }
 
 
