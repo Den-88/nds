@@ -33,7 +33,7 @@ import com.yandex.mobile.ads.banner.BannerAdView
 import com.yandex.mobile.ads.common.AdRequest
 import com.yandex.mobile.ads.common.AdRequestError
 import com.yandex.mobile.ads.common.ImpressionData
-import com.yandex.mobile.ads.common.MobileAds
+import com.yandex.mobile.ads.common.YandexAds
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.Locale
@@ -57,7 +57,7 @@ class MainActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
 
         // Инициализация рекламного SDK Yandex
-        MobileAds.initialize(this) {}
+        YandexAds.initialize(this) {}
 
         // Настройка привязки вида
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -177,34 +177,34 @@ class MainActivity : BaseActivity() {
             }
             // Преобразуем ширину в dp для баннера
             val adWidth = (adWidthPixels / resources.displayMetrics.density).roundToInt()
-            return BannerAdSize.stickySize(this, adWidth)
+            return BannerAdSize.sticky(this, adWidth)
         }
 
     // Метод для загрузки баннерной рекламы с обработкой событий
     private fun loadBannerAd(adSize: BannerAdSize): BannerAdView {
+        val adUnitId = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val installSourceInfo = packageManager.getInstallSourceInfo(packageName)
+            val installerPackageName = installSourceInfo.installingPackageName
+
+            when (installerPackageName) {
+                "com.android.vending" -> ConfigReader.getAdUnitId(this@MainActivity)
+                "ru.vk.store" -> ConfigReader.getAdRuStoreUnitId(this@MainActivity)
+                else -> ConfigReader.getAdUnitId(this@MainActivity)
+            }
+        } else {
+            // Используем устаревший метод для API ниже 30
+            @Suppress("DEPRECATION")
+            val installerPackageName = packageManager.getInstallerPackageName(packageName)
+
+            when (installerPackageName) {
+                "com.android.vending" -> ConfigReader.getAdUnitId(this@MainActivity)
+                "ru.vk.store" -> ConfigReader.getAdRuStoreUnitId(this@MainActivity)
+                else -> ConfigReader.getAdUnitId(this@MainActivity)
+            }
+        } ?: ""
+
         return binding.adContainerView.apply {
             setAdSize(adSize)
-            // Получаем ID рекламного блока
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                val installSourceInfo = packageManager.getInstallSourceInfo(packageName)
-                val installerPackageName = installSourceInfo.installingPackageName
-
-                when (installerPackageName) {
-                    "com.android.vending" -> setAdUnitId(ConfigReader.getAdUnitId(this@MainActivity))
-                    "ru.vk.store" -> setAdUnitId(ConfigReader.getAdRuStoreUnitId(this@MainActivity))
-                    else -> setAdUnitId(ConfigReader.getAdUnitId(this@MainActivity))
-                }
-            } else {
-                // Используем устаревший метод для API ниже 30
-                @Suppress("DEPRECATION")
-                val installerPackageName = packageManager.getInstallerPackageName(packageName)
-
-                when (installerPackageName) {
-                    "com.android.vending" -> setAdUnitId(ConfigReader.getAdUnitId(this@MainActivity))
-                    "ru.vk.store" -> setAdUnitId(ConfigReader.getAdRuStoreUnitId(this@MainActivity))
-                    else -> setAdUnitId(ConfigReader.getAdUnitId(this@MainActivity))
-                }
-            }
 
             // Установка слушателя событий баннерной рекламы
             setBannerAdEventListener(object : BannerAdEventListener {
@@ -222,18 +222,12 @@ class MainActivity : BaseActivity() {
                 // Обработка клика на рекламу
                 override fun onAdClicked() {}
 
-                // Событие при уходе пользователя из приложения
-                override fun onLeftApplication() {}
-
-                // Событие при возврате в приложение
-                override fun onReturnedToApplication() {}
-
                 // Событие при показе рекламы
                 override fun onImpression(impressionData: ImpressionData?) {
                 }
             })
             // Загружаем рекламный запрос
-            loadAd(AdRequest.Builder().build())
+            loadAd(AdRequest.Builder(adUnitId).build())
         }
     }
 
@@ -472,7 +466,7 @@ class MainActivity : BaseActivity() {
                                 Handler(Looper.getMainLooper()).postDelayed({
                                     // Показываем цифровую клавиатуру
                                 val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-                                imm.showSoftInput(prc, InputMethodManager.SHOW_IMPLICIT)
+                                imm.showSoftInput(prc, 0)
                                 }, 200) // Задержка в миллисекундах
 
                             }
