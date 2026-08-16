@@ -10,7 +10,7 @@ android {
         applicationId = "com.den.shak.nds"
         minSdk = 24
         targetSdk = 37
-        versionCode = 10
+        versionCode = 11
         versionName = "2.6.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
